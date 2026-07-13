@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ExportDialog } from "./ExportDialog";
 import { FormSettingsDialog } from "./FormSettingsDialog";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -162,6 +163,8 @@ export function Toolbar() {
         <span className="mx-1 h-6 w-0.5 bg-line-soft max-sm:hidden" aria-hidden />
 
         <ThemeToggle />
+
+        <ShortcutsDialog />
 
         <Tooltip>
           <TooltipTrigger asChild>

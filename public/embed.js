@@ -144,7 +144,7 @@
         case "pattern":
           try {
             if (!new RegExp(String(rule.value)).test(str)) return rule.message;
-          } catch (e) {
+          } catch {
             /* invalid regex — skip */
           }
           break;
@@ -154,7 +154,7 @@
         case "url":
           try {
             new URL(str);
-          } catch (e) {
+          } catch {
             return rule.message;
           }
           break;
@@ -459,7 +459,7 @@
       var schema;
       try {
         schema = JSON.parse(node.textContent);
-      } catch (e) {
+      } catch {
         return;
       }
       mount.setAttribute("data-ff-mounted", "1");

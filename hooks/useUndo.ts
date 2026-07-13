@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useBuilderStore } from "@/lib/store";
 
-function isEditableTarget(target: EventTarget | null): boolean {
+export function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
   return (

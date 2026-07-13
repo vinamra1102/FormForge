@@ -681,20 +681,13 @@ function AppearanceTab({ field }: { field: FormField }) {
 // Panel
 // ---------------------------------------------------------------------------
 
-function EditorPanel({ field }: { field: FormField }) {
+function EditorContent({ field }: { field: FormField }) {
   const selectField = useBuilderStore((s) => s.selectField);
   const definition = FIELD_REGISTRY[field.type];
   const Icon = FIELD_ICONS[definition.icon];
 
   return (
-    <motion.aside
-      initial={{ x: 380 }}
-      animate={{ x: 0 }}
-      exit={{ x: 380 }}
-      transition={{ type: "tween", duration: 0.22, ease: "easeOut" }}
-      aria-label={`Edit ${field.label}`}
-      className="flex w-[340px] shrink-0 flex-col border-l-2 border-line bg-background max-md:fixed max-md:inset-y-0 max-md:right-0 max-md:z-40 max-md:w-full max-md:max-w-sm"
-    >
+    <>
       <header className="flex items-center justify-between gap-2 border-b-2 border-line bg-brand px-4 py-3 text-ink">
         <span className="flex min-w-0 items-center gap-2">
           <Icon className="size-4 shrink-0" />
@@ -734,11 +727,15 @@ function EditorPanel({ field }: { field: FormField }) {
           </TabsContent>
         </Tabs>
       </div>
-    </motion.aside>
+    </>
   );
 }
 
-/** Right panel — appears when a field is selected, slides in from the right. */
+/**
+ * Right panel — slides in when a field is selected. The panel itself persists
+ * across selection changes (only one is ever mounted); the inner content is
+ * keyed by field id so tab/local state resets per field.
+ */
 export function FieldEditor() {
   const selectedField = useBuilderStore(
     (s) => s.form.fields.find((f) => f.id === s.selectedFieldId) ?? null,
@@ -747,7 +744,17 @@ export function FieldEditor() {
   return (
     <AnimatePresence>
       {selectedField && (
-        <EditorPanel key={selectedField.id} field={selectedField} />
+        <motion.aside
+          key="field-editor"
+          initial={{ x: 380 }}
+          animate={{ x: 0 }}
+          exit={{ x: 380 }}
+          transition={{ type: "tween", duration: 0.22, ease: "easeOut" }}
+          aria-label={`Edit ${selectedField.label}`}
+          className="flex w-[340px] shrink-0 flex-col border-l-2 border-line bg-background max-md:fixed max-md:inset-y-0 max-md:right-0 max-md:z-40 max-md:w-full max-md:max-w-sm"
+        >
+          <EditorContent key={selectedField.id} field={selectedField} />
+        </motion.aside>
       )}
     </AnimatePresence>
   );

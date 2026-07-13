@@ -18,15 +18,25 @@ function PaletteItem({ definition }: { definition: FieldDefinition }) {
   });
   const Icon = FIELD_ICONS[definition.icon];
 
+  const add = () => {
+    addField(definition.type);
+    toast.success(`${definition.label} field added`);
+  };
+
   return (
     <button
       ref={setNodeRef}
       {...attributes}
       {...listeners}
       type="button"
-      onClick={() => {
-        addField(definition.type);
-        toast.success(`${definition.label} field added`);
+      onClick={add}
+      // dnd-kit's KeyboardSensor hijacks Enter/Space to start a keyboard
+      // drag; for palette items "press Enter to add" is far more usable.
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          add();
+        }
       }}
       className={cn(
         "flex w-full cursor-grab items-center gap-3 border-2 border-line bg-surface p-2.5 text-left transition-colors focus-hard hover:border-crimson hover:bg-brand hover:text-ink active:cursor-grabbing",
