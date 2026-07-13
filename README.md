@@ -6,7 +6,7 @@
 
 Drag. Drop. Validate. Export. No code required.
 
-[**Live demo →**](https://formforge-vinamra.vercel.app) · [Report a bug](https://github.com/vinamra1102/FormForge/issues)
+[**Live demo →**](https://formforge-three-lake.vercel.app) · [Report a bug](https://github.com/vinamra1102/FormForge/issues)
 
 </div>
 

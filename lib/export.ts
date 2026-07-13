@@ -1,6 +1,6 @@
 import type { FormField, FormSchema } from "@/types";
 
-export const SITE_URL = "https://formforge-vinamra.vercel.app";
+export const SITE_URL = "https://formforge-three-lake.vercel.app";
 
 /** Clean, pretty-printed JSON export of the form schema. */
 export function toJSONSchema(form: FormSchema): string {

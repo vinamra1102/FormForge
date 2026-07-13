@@ -26,7 +26,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://formforge-vinamra.vercel.app"),
+  metadataBase: new URL("https://formforge-three-lake.vercel.app"),
   title: {
     default: "FormForge — Build forms that don't suck",
     template: "%s · FormForge",
