@@ -63,9 +63,12 @@ function requiredMessage(field: FormField): string {
   return custom?.message || `${field.label || "This field"} is required`;
 }
 
-function isRequired(field: FormField): boolean {
+/** A field is required if flagged directly or via a `required` rule. */
+export function fieldIsRequired(field: FormField): boolean {
   return field.required || field.validations.some((r) => r.type === "required");
 }
+
+const isRequired = fieldIsRequired;
 
 function stringFieldSchema(field: FormField): z.ZodTypeAny {
   let schema = z.string();
