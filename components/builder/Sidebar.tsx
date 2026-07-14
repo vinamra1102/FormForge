@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Search } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 import { fieldsByCategory, type FieldDefinition } from "@/lib/field-registry";
 import { useBuilderStore } from "@/lib/store";
@@ -149,6 +149,38 @@ function MobilePillPaletteItem({
   );
 }
 
+function ScrollableRow({ children }: { children: React.ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showHint, setShowHint] = useState(true);
+
+  const handleScroll = () => {
+    if (showHint) setShowHint(false);
+  };
+
+  return (
+    <div className="relative">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex gap-2 overflow-x-auto pb-1"
+        style={{
+          maskImage:
+            "linear-gradient(to right, black 85%, transparent)",
+          WebkitMaskImage:
+            "linear-gradient(to right, black 85%, transparent)",
+        }}
+      >
+        {children}
+      </div>
+      {showHint && (
+        <div className="pointer-events-none absolute right-0 top-0 flex h-full items-center pr-1">
+          <ChevronRight className="size-4 animate-pulse text-foreground/30" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Component palette: search + categorised, draggable field types. */
 export function Sidebar() {
   const [query, setQuery] = useState("");
@@ -186,14 +218,14 @@ export function Sidebar() {
                 {group.category}{" "}
                 <span className="text-foreground/30">({group.fields.length})</span>
               </h3>
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <ScrollableRow>
                 {group.fields.map((definition) => (
                   <MobilePillPaletteItem
                     key={definition.type}
                     definition={definition}
                   />
                 ))}
-              </div>
+              </ScrollableRow>
             </section>
           ))}
         </div>
