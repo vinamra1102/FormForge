@@ -9,6 +9,8 @@ import {
   Download,
   ExternalLink,
   Hammer,
+  Keyboard,
+  MoreHorizontal,
   Moon,
   Redo2,
   RotateCcw,
@@ -62,6 +64,23 @@ function ThemeToggle() {
   );
 }
 
+function ThemeToggleDropdownItem() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  return (
+    <DropdownMenuItem
+      onSelect={() =>
+        setTheme(resolvedTheme === "dark" ? "light" : "dark")
+      }
+    >
+      {mounted && resolvedTheme === "dark" ? <Sun /> : <Moon />}
+      Toggle dark mode
+    </DropdownMenuItem>
+  );
+}
+
 /** Top bar: logo, editable title, undo/redo, preview, export, save. */
 export function Toolbar() {
   const {
@@ -80,6 +99,7 @@ export function Toolbar() {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportTab, setExportTab] = useState<ExportFormat>("json");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   useEffect(() => setTitle(form.title), [form.title]);
 
@@ -139,11 +159,12 @@ export function Toolbar() {
               onClick={undo}
               disabled={!canUndo}
               aria-label="Undo"
+              className={canUndo ? "" : "opacity-40"}
             >
               <Undo2 />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Undo (Ctrl+Z)</TooltipContent>
+          <TooltipContent>Undo — Ctrl+Z</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -153,32 +174,35 @@ export function Toolbar() {
               onClick={redo}
               disabled={!canRedo}
               aria-label="Redo"
+              className={canRedo ? "" : "opacity-40"}
             >
               <Redo2 />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Redo (Ctrl+Shift+Z)</TooltipContent>
+          <TooltipContent>Redo — Ctrl+Shift+Z</TooltipContent>
         </Tooltip>
 
         <span className="mx-1 h-6 w-0.5 bg-line-soft max-sm:hidden" aria-hidden />
 
-        <ThemeToggle />
+        {/* Desktop: show all controls inline */}
+        <div className="hidden items-center gap-1 sm:flex">
+          <ThemeToggle />
+          <ShortcutsDialog />
 
-        <ShortcutsDialog />
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Form settings"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <Settings2 />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Form settings</TooltipContent>
-        </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Form settings"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <Settings2 />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Form settings</TooltipContent>
+          </Tooltip>
+        </div>
 
         <Button
           variant="outline"
@@ -190,11 +214,41 @@ export function Toolbar() {
           Preview
         </Button>
 
+        {/* Mobile: overflow menu for secondary actions */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="More actions"
+              className="sm:hidden"
+            >
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="sm:hidden">
+            <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
+              <Settings2 />
+              Form settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={handlePreview}>
+              <ExternalLink />
+              Preview
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setShortcutsOpen(true)}>
+              <Keyboard />
+              Keyboard shortcuts
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <ThemeToggleDropdownItem />
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="brand" size="sm">
               <Download />
-              Export
+              <span className="max-sm:hidden">Export</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -227,7 +281,7 @@ export function Toolbar() {
 
         <Button size="sm" onClick={handleSave}>
           <Save />
-          {isDirty ? "Save*" : "Save"}
+          <span className="max-sm:hidden">{isDirty ? "Save*" : "Save"}</span>
         </Button>
       </div>
 
@@ -237,6 +291,7 @@ export function Toolbar() {
         initialTab={exportTab}
       />
       <FormSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <ShortcutsDialog openExternal={shortcutsOpen} onOpenExternalChange={setShortcutsOpen} />
     </header>
   );
 }

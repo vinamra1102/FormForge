@@ -38,8 +38,20 @@ function Key({ children }: { children: string }) {
 }
 
 /** Keyboard shortcuts reference — opens with `?` or the toolbar button. */
-export function ShortcutsDialog() {
+export function ShortcutsDialog({
+  openExternal,
+  onOpenExternalChange,
+}: {
+  openExternal?: boolean;
+  onOpenExternalChange?: (open: boolean) => void;
+} = {}) {
   const [open, setOpen] = useState(false);
+
+  const isOpen = openExternal !== undefined ? openExternal : open;
+  const setIsOpen = (next: boolean) => {
+    if (onOpenExternalChange) onOpenExternalChange(next);
+    setOpen(next);
+  };
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -52,6 +64,11 @@ export function ShortcutsDialog() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // Sync external open state
+  useEffect(() => {
+    if (openExternal !== undefined) setOpen(openExternal);
+  }, [openExternal]);
+
   return (
     <>
       <Tooltip>
@@ -60,7 +77,7 @@ export function ShortcutsDialog() {
             variant="ghost"
             size="icon"
             aria-label="Keyboard shortcuts"
-            onClick={() => setOpen(true)}
+            onClick={() => setIsOpen(true)}
           >
             <Keyboard />
           </Button>
@@ -68,7 +85,7 @@ export function ShortcutsDialog() {
         <TooltipContent>Keyboard shortcuts (?)</TooltipContent>
       </Tooltip>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Keyboard shortcuts</DialogTitle>
