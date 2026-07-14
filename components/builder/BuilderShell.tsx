@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core";
 import type { FormField } from "@/types";
 import type { FieldDefinition } from "@/lib/field-registry";
@@ -8,6 +8,7 @@ import { useBuilderStore } from "@/lib/store";
 import { useDragAndDrop } from "@/hooks/useDragAndDrop";
 import { useUndo } from "@/hooks/useUndo";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 import { FIELD_ICONS } from "./field-icons";
 import { Canvas } from "./Canvas";
 import { FieldEditor } from "./FieldEditor";
@@ -36,15 +37,43 @@ function FieldGhost({ field }: { field: FormField }) {
   );
 }
 
+/** Auto-save every 30s when the form has unsaved changes. */
+function useAutoSave() {
+  const isDirty = useBuilderStore((s) => s.isDirty);
+  const saveForm = useBuilderStore((s) => s.saveForm);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const interval = setInterval(() => {
+      const dirty = useBuilderStore.getState().isDirty;
+      if (dirty) {
+        useBuilderStore.getState().saveForm();
+      }
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [isDirty, saveForm]);
+}
+
 /** The full builder: toolbar on top, palette | canvas | editor below. */
 export function BuilderShell() {
   useUndo();
+  useAutoSave();
   const { sensors, activeDrag, onDragStart, onDragEnd, onDragCancel } =
     useDragAndDrop();
 
-  // Rehydrate the persisted form after mount (avoids SSR hydration mismatch).
+  // Rehydrate the persisted form after mount (avoids SSR hydration mismatch)
+  // and show a "Draft restored" toast if a saved form was loaded.
+  const [rehydrated, setRehydrated] = useState(false);
   useEffect(() => {
     void useBuilderStore.persist.rehydrate();
+    // Check if there's a saved form before rehydration marks it as restored.
+    const hasExisting =
+      typeof window !== "undefined" &&
+      window.localStorage.getItem("formforge:builder") !== null;
+    setRehydrated(true);
+    if (hasExisting) {
+      toast.success("Draft restored");
+    }
   }, []);
 
   return (

@@ -8,8 +8,10 @@ import {
   Code2,
   Download,
   ExternalLink,
+  FileText,
   Hammer,
   Keyboard,
+  Loader2,
   MoreHorizontal,
   Moon,
   Redo2,
@@ -101,6 +103,7 @@ export function Toolbar() {
   const [exportTab, setExportTab] = useState<ExportFormat>("json");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   useEffect(() => setTitle(form.title), [form.title]);
 
@@ -136,8 +139,23 @@ export function Toolbar() {
   };
 
   const handleSave = () => {
+    setSaveState("saving");
     saveForm();
-    toast.success("Form saved");
+    setTimeout(() => {
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 1000);
+    }, 400);
+  };
+
+  const handleNewForm = () => {
+    if (
+      window.confirm(
+        "Start a new form? Your current draft will be cleared."
+      )
+    ) {
+      resetForm();
+      toast.success("New form created");
+    }
   };
 
   const handlePreview = () => {
@@ -262,6 +280,14 @@ export function Toolbar() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <ThemeToggleDropdownItem />
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={handleNewForm}
+              className="text-crimson focus:bg-crimson focus:text-white"
+            >
+              <FileText />
+              New form
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -293,6 +319,13 @@ export function Toolbar() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
+              onSelect={handleNewForm}
+              className="text-crimson focus:bg-crimson focus:text-white"
+            >
+              <FileText />
+              New form
+            </DropdownMenuItem>
+            <DropdownMenuItem
               onSelect={() => {
                 resetForm();
                 toast.success("Form reset");
@@ -305,9 +338,23 @@ export function Toolbar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button size="sm" onClick={handleSave}>
-          <Save />
-          <span className="max-sm:hidden">{isDirty ? "Save*" : "Save"}</span>
+        <Button size="sm" onClick={handleSave} disabled={saveState === "saving"}>
+          {saveState === "saving" ? (
+            <Loader2 className="animate-spin" />
+          ) : saveState === "saved" ? (
+            <Save />
+          ) : (
+            <Save />
+          )}
+          <span className="max-sm:hidden">
+            {saveState === "saving"
+              ? "Saving…"
+              : saveState === "saved"
+                ? "Saved ✓"
+                : isDirty
+                  ? "Save*"
+                  : "Save"}
+          </span>
         </Button>
       </div>
 
