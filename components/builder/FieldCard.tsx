@@ -91,7 +91,7 @@ export function FieldCard({ field }: { field: FormField }) {
         onKeyDown={onKeyDown}
         aria-label={`${definition.label} field: ${field.label}. Press Enter to edit, Delete to remove, arrow keys to reorder.`}
         className={cn(
-          "group border-2 bg-surface transition-colors focus-hard",
+          "group touch-none border-2 bg-surface transition-colors focus-hard",
           selected ? "border-crimson" : "border-line hover:border-crimson/50",
         )}
       >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core";
 import type { FormField } from "@/types";
 import type { FieldDefinition } from "@/lib/field-registry";
@@ -63,14 +63,12 @@ export function BuilderShell() {
 
   // Rehydrate the persisted form after mount (avoids SSR hydration mismatch)
   // and show a "Draft restored" toast if a saved form was loaded.
-  const [rehydrated, setRehydrated] = useState(false);
   useEffect(() => {
     void useBuilderStore.persist.rehydrate();
     // Check if there's a saved form before rehydration marks it as restored.
     const hasExisting =
       typeof window !== "undefined" &&
       window.localStorage.getItem("formforge:builder") !== null;
-    setRehydrated(true);
     if (hasExisting) {
       toast.success("Draft restored");
     }
@@ -78,7 +76,7 @@ export function BuilderShell() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex h-dvh flex-col bg-background">
+      <div className="flex h-dvh flex-col bg-background pb-[env(safe-area-inset-bottom)]">
         <Toolbar />
         <DndContext
           sensors={sensors}

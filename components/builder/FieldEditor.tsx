@@ -741,6 +741,16 @@ export function FieldEditor() {
     (s) => s.form.fields.find((f) => f.id === s.selectedFieldId) ?? null,
   );
 
+  // Prevent body scroll when the editor panel is open on mobile.
+  useEffect(() => {
+    if (selectedField) {
+      document.body.classList.add("editor-open");
+    } else {
+      document.body.classList.remove("editor-open");
+    }
+    return () => document.body.classList.remove("editor-open");
+  }, [selectedField]);
+
   return (
     <AnimatePresence>
       {selectedField && (

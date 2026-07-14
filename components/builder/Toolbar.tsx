@@ -164,7 +164,7 @@ export function Toolbar() {
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b-2 border-line bg-background px-3 sm:px-4">
+    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b-2 border-line bg-background px-3 pt-[env(safe-area-inset-top)] sm:px-4">
       <div className="flex min-w-0 items-center gap-3">
         <Link
           href="/"
