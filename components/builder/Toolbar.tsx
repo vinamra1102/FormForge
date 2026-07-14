@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 import type { ExportFormat } from "@/types";
 import { useFormBuilder } from "@/hooks/useFormBuilder";
+import { toEmbedCode, toJSONSchema, toReactCode } from "@/lib/export";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -112,6 +113,26 @@ export function Toolbar() {
   const openExport = (tab: ExportFormat) => {
     setExportTab(tab);
     setExportOpen(true);
+  };
+
+  const COPY_LABELS: Record<ExportFormat, string> = {
+    json: "JSON",
+    react: "React Component",
+    embed: "Embed Code",
+  };
+
+  const copyFormat = async (format: ExportFormat) => {
+    const outputs = {
+      json: toJSONSchema(form),
+      react: toReactCode(form),
+      embed: toEmbedCode(form),
+    };
+    try {
+      await navigator.clipboard.writeText(outputs[format]);
+      toast.success(`${COPY_LABELS[format]} copied to clipboard`);
+    } catch {
+      toast.error("Couldn't access the clipboard");
+    }
   };
 
   const handleSave = () => {
@@ -253,17 +274,22 @@ export function Toolbar() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Export as</DropdownMenuLabel>
-            <DropdownMenuItem onSelect={() => openExport("json")}>
+            <DropdownMenuItem onSelect={() => copyFormat("json")}>
               <Braces />
-              JSON Schema
+              Copy JSON
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => openExport("react")}>
+            <DropdownMenuItem onSelect={() => copyFormat("react")}>
               <Code2 />
-              React Component
+              Copy React Component
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => openExport("embed")}>
+            <DropdownMenuItem onSelect={() => copyFormat("embed")}>
               <ExternalLink />
-              Embed Code
+              Copy Embed Code
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => openExport("json")}>
+              <Download />
+              View &amp; export code
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
