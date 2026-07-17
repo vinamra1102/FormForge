@@ -36,3 +36,9 @@ pnpm-debug.log*
 # IDE
 .idea
 .vscode
+
+.vercel
+
+# external tooling artifacts
+.commandcode/
+commit_msg.txt
