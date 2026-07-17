@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
+import { clerkAppearance, clerkEnabled } from "@/lib/clerk-appearance";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -72,7 +74,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
+  const app = (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
@@ -100,4 +102,9 @@ export default function RootLayout({
       </body>
     </html>
   );
+
+  // ClerkProvider only mounts when keys are configured — the app remains
+  // fully usable (localStorage persistence, no auth) without them.
+  if (!clerkEnabled) return app;
+  return <ClerkProvider appearance={clerkAppearance}>{app}</ClerkProvider>;
 }
