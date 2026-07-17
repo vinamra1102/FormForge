@@ -90,8 +90,11 @@ export function FieldCard({ field }: { field: FormField }) {
         }}
         onKeyDown={onKeyDown}
         aria-label={`${definition.label} field: ${field.label}. Press Enter to edit, Delete to remove, arrow keys to reorder.`}
+        data-field-id={field.id}
         className={cn(
-          "group touch-none border-2 bg-surface transition-colors focus-hard",
+          // touch-action stays default here so the canvas can pan; only the
+          // drag handle is touch-none (long-press drag via TouchSensor).
+          "group border-2 bg-surface transition-colors focus-hard max-md:min-h-20",
           selected ? "border-crimson" : "border-line hover:border-crimson/50",
         )}
       >
@@ -125,7 +128,7 @@ export function FieldCard({ field }: { field: FormField }) {
                     isHalf ? "Expand to full width" : "Shrink to half width"
                   }
                   className={cn(
-                    "rounded-sm p-1 transition-colors focus-hard",
+                    "rounded-sm p-1 transition-colors focus-hard max-md:p-[15px]",
                     selected
                       ? "hover:bg-white/20"
                       : "hover:bg-brand hover:text-ink",
@@ -153,7 +156,7 @@ export function FieldCard({ field }: { field: FormField }) {
                   }}
                   aria-label={`Delete ${field.label}`}
                   className={cn(
-                    "rounded-sm p-1 transition-colors focus-hard",
+                    "rounded-sm p-1 transition-colors focus-hard max-md:p-[15px]",
                     selected
                       ? "hover:bg-white/20"
                       : "hover:bg-crimson hover:text-white",
@@ -172,7 +175,7 @@ export function FieldCard({ field }: { field: FormField }) {
               {...listeners}
               aria-label={`Drag to reorder ${field.label}`}
               className={cn(
-                "cursor-grab rounded-sm p-1 transition-colors focus-hard active:cursor-grabbing",
+                "cursor-grab touch-none rounded-sm p-1 transition-colors focus-hard active:cursor-grabbing max-md:p-[15px]",
                 selected ? "hover:bg-white/20" : "hover:bg-brand hover:text-ink",
               )}
             >

@@ -22,7 +22,7 @@ export function Canvas() {
         if (e.target === e.currentTarget) selectField(null);
       }}
       className={cn(
-        "min-w-0 flex-1 overflow-y-auto bg-surface-muted p-4 transition-colors sm:p-6",
+        "min-w-0 flex-1 overflow-y-auto bg-surface-muted p-4 transition-colors [touch-action:pan-y] sm:p-6",
         isOver && fields.length > 0 && "bg-brand/20",
       )}
     >
@@ -39,7 +39,8 @@ export function Canvas() {
             items={fields.map((f) => f.id)}
             strategy={rectSortingStrategy}
           >
-            <div className="grid grid-cols-1 gap-3 pb-24 sm:grid-cols-2">
+            {/* Extra mobile bottom padding clears the floating add button. */}
+            <div className="grid grid-cols-1 gap-3 pb-24 max-md:pb-36 sm:grid-cols-2">
               {fields.map((field) => (
                 <FieldCard key={field.id} field={field} />
               ))}

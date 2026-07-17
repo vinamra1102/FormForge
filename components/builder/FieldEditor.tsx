@@ -11,6 +11,7 @@ import type {
 import { FIELD_REGISTRY } from "@/lib/field-registry";
 import { useBuilderStore } from "@/lib/store";
 import { slugify, uid, cn } from "@/lib/utils";
+import { BottomSheet } from "@/components/ui/BottomSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -732,40 +733,70 @@ function EditorContent({ field }: { field: FormField }) {
 }
 
 /**
- * Right panel — slides in when a field is selected. The panel itself persists
- * across selection changes (only one is ever mounted); the inner content is
- * keyed by field id so tab/local state resets per field.
+ * Field editor. On md+ it's a right-hand drawer that slides in; on mobile
+ * it's a bottom sheet with a sticky Done button. The panel persists across
+ * selection changes; the inner content is keyed by field id so tab/local
+ * state resets per field. Closing on mobile deselects the field.
  */
 export function FieldEditor() {
   const selectedField = useBuilderStore(
     (s) => s.form.fields.find((f) => f.id === s.selectedFieldId) ?? null,
   );
-
-  // Prevent body scroll when the editor panel is open on mobile.
-  useEffect(() => {
-    if (selectedField) {
-      document.body.classList.add("editor-open");
-    } else {
-      document.body.classList.remove("editor-open");
-    }
-    return () => document.body.classList.remove("editor-open");
-  }, [selectedField]);
+  const selectField = useBuilderStore((s) => s.selectField);
 
   return (
-    <AnimatePresence>
-      {selectedField && (
-        <motion.aside
-          key="field-editor"
-          initial={{ x: 380 }}
-          animate={{ x: 0 }}
-          exit={{ x: 380 }}
-          transition={{ type: "tween", duration: 0.22, ease: "easeOut" }}
-          aria-label={`Edit ${selectedField.label}`}
-          className="flex w-[340px] shrink-0 flex-col border-l-2 border-line bg-background max-md:fixed max-md:inset-y-0 max-md:right-0 max-md:z-40 max-md:w-full max-md:max-w-sm"
+    <>
+      {/* ── Desktop / tablet: right drawer ── */}
+      <div className="contents max-md:hidden">
+        <AnimatePresence>
+          {selectedField && (
+            <motion.aside
+              key="field-editor"
+              initial={{ x: 380 }}
+              animate={{ x: 0 }}
+              exit={{ x: 380 }}
+              transition={{ type: "tween", duration: 0.22, ease: "easeOut" }}
+              aria-label={`Edit ${selectedField.label}`}
+              className="flex w-[340px] shrink-0 flex-col border-l-2 border-line bg-background"
+            >
+              <EditorContent
+                key={selectedField.id}
+                field={selectedField}
+              />
+            </motion.aside>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── Mobile: bottom sheet ── */}
+      <div className="md:hidden">
+        <BottomSheet
+          isOpen={selectedField !== null}
+          onClose={() => selectField(null)}
+          title={selectedField ? `Edit: ${selectedField.label}` : "Edit field"}
+          snapPoints={[340, 560]}
         >
-          <EditorContent key={selectedField.id} field={selectedField} />
-        </motion.aside>
-      )}
-    </AnimatePresence>
+          {selectedField && (
+            <div
+              key={selectedField.id}
+              className="flex h-full flex-col"
+              aria-label={`Edit ${selectedField.label}`}
+            >
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <EditorContent field={selectedField} />
+              </div>
+              <div className="shrink-0 border-t-2 border-line bg-background p-3">
+                <Button
+                  className="h-12 w-full"
+                  onClick={() => selectField(null)}
+                >
+                  Done
+                </Button>
+              </div>
+            </div>
+          )}
+        </BottomSheet>
+      </div>
+    </>
   );
 }

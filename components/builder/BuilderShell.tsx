@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { FIELD_ICONS } from "./field-icons";
 import { Canvas } from "./Canvas";
 import { FieldEditor } from "./FieldEditor";
+import { MobilePalette } from "./MobilePalette";
 import { Sidebar } from "./Sidebar";
 import { Toolbar } from "./Toolbar";
 
@@ -76,6 +77,7 @@ export function BuilderShell() {
             <Canvas />
             <FieldEditor />
           </div>
+          <MobilePalette />
           <DragOverlay dropAnimation={null}>
             {activeDrag?.kind === "palette" && (
               <PaletteGhost definition={activeDrag.definition} />

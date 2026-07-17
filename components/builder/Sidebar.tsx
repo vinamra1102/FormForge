@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { ChevronRight, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { fieldsByCategory, type FieldDefinition } from "@/lib/field-registry";
 import { useBuilderStore } from "@/lib/store";
@@ -66,7 +66,9 @@ function PaletteItem({ definition }: { definition: FieldDefinition }) {
 function IconOnlyPaletteItem({ definition }: { definition: FieldDefinition }) {
   const addField = useBuilderStore((s) => s.addField);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `palette-${definition.type}`,
+    // Distinct from the desktop palette id — both variants are mounted
+    // (CSS-hidden) and dnd-kit ids must be unique.
+    id: `palette-tablet-${definition.type}`,
     data: { source: "palette", type: definition.type },
   });
   const Icon = FIELD_ICONS[definition.icon];
@@ -105,82 +107,6 @@ function IconOnlyPaletteItem({ definition }: { definition: FieldDefinition }) {
   );
 }
 
-function MobilePillPaletteItem({
-  definition,
-}: {
-  definition: FieldDefinition;
-}) {
-  const addField = useBuilderStore((s) => s.addField);
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `palette-${definition.type}`,
-    data: { source: "palette", type: definition.type },
-  });
-  const Icon = FIELD_ICONS[definition.icon];
-
-  const add = () => {
-    addField(definition.type);
-    toast.success(`${definition.label} field added`);
-  };
-
-  return (
-    <button
-      ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      type="button"
-      onClick={add}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          add();
-        }
-      }}
-      className={cn(
-        "flex shrink-0 cursor-grab items-center gap-1.5 border-2 border-line bg-surface px-3 py-2 text-left transition-colors focus-hard hover:border-crimson hover:bg-brand hover:text-ink active:cursor-grabbing",
-        isDragging && "opacity-40",
-      )}
-      aria-label={`Add ${definition.label} field`}
-    >
-      <Icon className="size-4 shrink-0" />
-      <span className="whitespace-nowrap font-display text-xs font-bold">
-        {definition.label}
-      </span>
-    </button>
-  );
-}
-
-function ScrollableRow({ children }: { children: React.ReactNode }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [showHint, setShowHint] = useState(true);
-
-  const handleScroll = () => {
-    if (showHint) setShowHint(false);
-  };
-
-  return (
-    <div className="relative">
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex gap-2 overflow-x-auto pb-1"
-        style={{
-          maskImage:
-            "linear-gradient(to right, black 85%, transparent)",
-          WebkitMaskImage:
-            "linear-gradient(to right, black 85%, transparent)",
-        }}
-      >
-        {children}
-      </div>
-      {showHint && (
-        <div className="pointer-events-none absolute right-0 top-0 flex h-full items-center pr-1">
-          <ChevronRight className="size-4 animate-pulse text-foreground/30" />
-        </div>
-      )}
-    </div>
-  );
-}
-
 /** Component palette: search + categorised, draggable field types. */
 export function Sidebar() {
   const [query, setQuery] = useState("");
@@ -188,48 +114,7 @@ export function Sidebar() {
 
   return (
     <>
-      {/* ── Mobile: stacked pill palette (≤768px) ── */}
-      <aside
-        aria-label="Field palette"
-        className="hidden w-full shrink-0 flex-col border-b-2 border-line bg-background max-md:flex"
-      >
-        <div className="border-b-2 border-line p-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground/40" />
-            <Input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search fields…"
-              aria-label="Search field types"
-              className="h-9 pl-9"
-            />
-          </div>
-        </div>
-        <div className="flex-1 space-y-2 overflow-y-auto p-2">
-          {groups.length === 0 && (
-            <p className="px-1 py-3 text-sm text-foreground/60">
-              No fields match &ldquo;{query}&rdquo;.
-            </p>
-          )}
-          {groups.map((group) => (
-            <section key={group.category}>
-              <h3 className="mb-1.5 px-1 font-display text-[10px] font-bold uppercase tracking-widest text-foreground/50">
-                {group.category}{" "}
-                <span className="text-foreground/30">({group.fields.length})</span>
-              </h3>
-              <ScrollableRow>
-                {group.fields.map((definition) => (
-                  <MobilePillPaletteItem
-                    key={definition.type}
-                    definition={definition}
-                  />
-                ))}
-              </ScrollableRow>
-            </section>
-          ))}
-        </div>
-      </aside>
+      {/* Mobile (<768px) uses the floating MobilePalette bottom sheet instead. */}
 
       {/* ── Tablet: icon-only sidebar (768–1024px) ── */}
       <aside
