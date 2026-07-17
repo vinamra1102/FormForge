@@ -58,7 +58,9 @@ test.describe("builder", () => {
     await page.getByLabel(/Add Text field/).click();
 
     await page.getByRole("button", { name: "Export" }).click();
-    await page.getByRole("menuitem", { name: "JSON Schema" }).click();
+    await page
+      .getByRole("menuitem", { name: "View & export code" })
+      .click();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();

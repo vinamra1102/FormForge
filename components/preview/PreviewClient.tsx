@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Hammer, Moon, Sun } from "lucide-react";
 import type { FormSchema } from "@/types";
+import { decodeSchemaFromURL } from "@/lib/export";
 import { safeParseFormSchema } from "@/lib/schema";
 import { readFormSnapshot } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -17,16 +18,9 @@ type LoadState =
   | { status: "missing" }
   | { status: "ready"; form: FormSchema };
 
-/** Decode a base64url-encoded schema from the `?s=` search param. */
+/** Decode a `?s=` schema param (gzip-compressed or legacy base64url JSON). */
 function decodeSharedSchema(encoded: string | null): FormSchema | null {
-  if (!encoded) return null;
-  try {
-    const json = atob(encoded.replace(/-/g, "+").replace(/_/g, "/"));
-    const parsed = safeParseFormSchema(JSON.parse(json));
-    return parsed.success ? parsed.data : null;
-  } catch {
-    return null;
-  }
+  return encoded ? decodeSchemaFromURL(encoded) : null;
 }
 
 /** Read the builder's own persisted draft as a fallback source. */

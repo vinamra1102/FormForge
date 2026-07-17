@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import {
   Braces,
-  Code2,
+  Copy,
   Download,
   ExternalLink,
+  FileCode2,
   FileText,
   Hammer,
   Keyboard,
+  Link2,
   Loader2,
   MoreHorizontal,
   Moon,
@@ -25,7 +27,15 @@ import { toast } from "sonner";
 import type { ExportFormat } from "@/types";
 import { useFormBuilder } from "@/hooks/useFormBuilder";
 import { useBuilderStore } from "@/lib/store";
-import { toEmbedCode, toJSONSchema, toReactCode } from "@/lib/export";
+import { copyToClipboard, downloadFile } from "@/lib/clipboard";
+import {
+  encodeSchemaToURL,
+  kebabCase,
+  pascalCase,
+  toEmbedCode,
+  toJSONSchema,
+  toReactCode,
+} from "@/lib/export";
 import { relativeTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -183,18 +193,54 @@ export function Toolbar() {
     embed: "Embed Code",
   };
 
-  const copyFormat = async (format: ExportFormat) => {
-    const outputs = {
-      json: toJSONSchema(form),
-      react: toReactCode(form),
-      embed: toEmbedCode(form),
-    };
-    try {
-      await navigator.clipboard.writeText(outputs[format]);
-      toast.success(`${COPY_LABELS[format]} copied to clipboard`);
-    } catch {
-      toast.error("Couldn't access the clipboard");
+  const exportOutput = (format: ExportFormat) =>
+    format === "json"
+      ? toJSONSchema(form)
+      : format === "react"
+        ? toReactCode(form)
+        : toEmbedCode(form);
+
+  const copyFormat = (format: ExportFormat) => {
+    void copyToClipboard(exportOutput(format), COPY_LABELS[format]);
+  };
+
+  const downloadFormat = (format: ExportFormat) => {
+    if (format === "json") {
+      downloadFile(
+        exportOutput("json"),
+        `${kebabCase(form.title)}.formforge.json`,
+        "application/json",
+      );
+    } else if (format === "react") {
+      downloadFile(
+        exportOutput("react"),
+        `${pascalCase(form.title)}Form.tsx`,
+        "text/plain",
+      );
+    } else {
+      // A self-contained page so the download works on double-click.
+      const html = [
+        "<!doctype html>",
+        `<html lang="en">`,
+        `<head><meta charset="utf-8"><title>${form.title.replace(/</g, "&lt;")}</title></head>`,
+        "<body>",
+        toEmbedCode(form),
+        "</body>",
+        "</html>",
+      ].join("\n");
+      downloadFile(html, `${kebabCase(form.title)}-embed.html`, "text/html");
     }
+  };
+
+  const copyShareLink = () => {
+    const url = encodeSchemaToURL(form);
+    if (!url) {
+      toast.error(
+        "Form is too large for a shareable link. Use JSON export instead.",
+      );
+      return;
+    }
+    void copyToClipboard(url, "Shareable link");
   };
 
   const handleSave = () => {
@@ -354,23 +400,43 @@ export function Toolbar() {
               <span className="max-sm:hidden">Export</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Export as</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-60">
+            <DropdownMenuLabel>JSON Schema</DropdownMenuLabel>
             <DropdownMenuItem onSelect={() => copyFormat("json")}>
-              <Braces />
-              Copy JSON
+              <Copy />
+              Copy
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => copyFormat("react")}>
-              <Code2 />
-              Copy React Component
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => copyFormat("embed")}>
-              <ExternalLink />
-              Copy Embed Code
+            <DropdownMenuItem onSelect={() => downloadFormat("json")}>
+              <Download />
+              Download
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => openExport("json")}>
+            <DropdownMenuLabel>React Component</DropdownMenuLabel>
+            <DropdownMenuItem onSelect={() => copyFormat("react")}>
+              <Copy />
+              Copy
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => downloadFormat("react")}>
+              <FileCode2 />
+              Download .tsx
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Embed Code</DropdownMenuLabel>
+            <DropdownMenuItem onSelect={() => copyFormat("embed")}>
+              <Copy />
+              Copy
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => downloadFormat("embed")}>
               <Download />
+              Download .html
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={copyShareLink}>
+              <Link2 />
+              Copy shareable link
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => openExport("json")}>
+              <Braces />
               View &amp; export code
             </DropdownMenuItem>
             <DropdownMenuSeparator />

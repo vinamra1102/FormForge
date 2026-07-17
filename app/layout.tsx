@@ -90,11 +90,11 @@ export default function RootLayout({
             position="bottom-right"
             toastOptions={{
               style: {
-                border: "2px solid #1a1a1a",
+                background: "#1A1A1A",
+                color: "#FFFDF0",
+                border: "2px solid #FFD000",
                 borderRadius: "0px",
-                background: "#fffdf0",
-                color: "#1a1a1a",
-                fontFamily: "var(--font-inter)",
+                fontFamily: "var(--font-inter), Inter, sans-serif",
               },
             }}
           />

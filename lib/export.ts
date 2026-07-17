@@ -1,6 +1,72 @@
+import { deflate, inflate } from "pako";
 import type { FormField, FormSchema } from "@/types";
+import { safeParseFormSchema } from "@/lib/schema";
 
 export const SITE_URL = "https://formforge-three-lake.vercel.app";
+
+/** Longest shareable URL we're willing to produce. */
+export const MAX_SHARE_URL_LENGTH = 8000;
+
+/** kebab-case a form title for file names. */
+export function kebabCase(input: string): string {
+  return (
+    input
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "form"
+  );
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+function base64UrlDecode(encoded: string): Uint8Array {
+  const b64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+/**
+ * Compress the schema (deflate + base64url) into a shareable preview URL.
+ * Returns null when the resulting URL would be too long for browsers/chat
+ * apps — callers should fall back to JSON export.
+ */
+export function encodeSchemaToURL(schema: FormSchema): string | null {
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : SITE_URL;
+  const compressed = deflate(JSON.stringify(schema));
+  const url = `${origin}/preview/shared?s=${base64UrlEncode(compressed)}`;
+  return url.length > MAX_SHARE_URL_LENGTH ? null : url;
+}
+
+/**
+ * Decode a `?s=` param back into a schema. Accepts both the compressed
+ * format and the legacy plain base64url JSON, and validates the result.
+ */
+export function decodeSchemaFromURL(encoded: string): FormSchema | null {
+  let json: string;
+  try {
+    json = inflate(base64UrlDecode(encoded), { toText: true });
+  } catch {
+    try {
+      json = atob(encoded.replace(/-/g, "+").replace(/_/g, "/"));
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const parsed = safeParseFormSchema(JSON.parse(json));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Clean, pretty-printed JSON export of the form schema. */
 export function toJSONSchema(form: FormSchema): string {
@@ -352,14 +418,19 @@ function indent(block: string, spaces: number): string {
     .join("\n");
 }
 
-function componentName(form: FormSchema): string {
-  const cleaned = form.title
+/** PascalCase a title for component/file names ("Generated" fallback). */
+export function pascalCase(input: string): string {
+  const cleaned = input
     .replace(/[^a-zA-Z0-9 ]/g, " ")
     .split(/\s+/)
     .filter(Boolean)
     .map((w) => w[0]!.toUpperCase() + w.slice(1))
     .join("");
-  return /^[A-Za-z]/.test(cleaned) && cleaned ? `${cleaned}Form` : "GeneratedForm";
+  return /^[A-Za-z]/.test(cleaned) && cleaned ? cleaned : "Generated";
+}
+
+function componentName(form: FormSchema): string {
+  return `${pascalCase(form.title)}Form`;
 }
 
 /**

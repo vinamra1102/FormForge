@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import ts from "typescript";
 import type { FormSchema } from "@/types";
-import { toEmbedCode, toJSONSchema, toReactCode } from "@/lib/export";
+import {
+  decodeSchemaFromURL,
+  encodeSchemaToURL,
+  toEmbedCode,
+  toJSONSchema,
+  toReactCode,
+} from "@/lib/export";
 import { createEmptyForm, createField } from "@/lib/store";
 
 function sampleForm(): FormSchema {
@@ -149,5 +155,43 @@ describe("toReactCode", () => {
     const form = createEmptyForm("odd");
     form.title = "123 !!!";
     expect(toReactCode(form)).toContain("function GeneratedForm()");
+  });
+});
+
+describe("shareable URL codec", () => {
+  it("round-trips a schema through encode → decode", () => {
+    const form = sampleForm();
+    const url = encodeSchemaToURL(form);
+    expect(url).not.toBeNull();
+    const encoded = new URL(url!).searchParams.get("s")!;
+    expect(decodeSchemaFromURL(encoded)).toEqual(form);
+  });
+
+  it("returns null for URLs that would be too long", () => {
+    const form = createEmptyForm("huge");
+    for (let i = 0; i < 400; i++) {
+      const field = createField("text", i);
+      field.label = `Question ${i} — ${"x".repeat(60)}-${i}`;
+      field.helpText = `${Math.sin(i)}`.repeat(4);
+      form.fields.push(field);
+    }
+    expect(encodeSchemaToURL(form)).toBeNull();
+  });
+
+  it("still decodes legacy plain-base64url payloads", () => {
+    // Legacy links were plain btoa (Latin-1 only) — mirror that constraint.
+    const form = createEmptyForm("legacy");
+    const field = createField("text", 0);
+    field.placeholder = "Plain ASCII placeholder";
+    form.fields = [field];
+    const legacy = btoa(JSON.stringify(form))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "");
+    expect(decodeSchemaFromURL(legacy)).toEqual(form);
+  });
+
+  it("rejects garbage input", () => {
+    expect(decodeSchemaFromURL("not-a-real-payload")).toBeNull();
   });
 });
