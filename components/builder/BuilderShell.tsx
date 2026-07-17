@@ -37,38 +37,24 @@ function FieldGhost({ field }: { field: FormField }) {
   );
 }
 
-/** Auto-save every 30s when the form has unsaved changes. */
-function useAutoSave() {
-  const isDirty = useBuilderStore((s) => s.isDirty);
-  const saveForm = useBuilderStore((s) => s.saveForm);
-
-  useEffect(() => {
-    if (!isDirty) return;
-    const interval = setInterval(() => {
-      const dirty = useBuilderStore.getState().isDirty;
-      if (dirty) {
-        useBuilderStore.getState().saveForm();
-      }
-    }, 30_000);
-    return () => clearInterval(interval);
-  }, [isDirty, saveForm]);
-}
-
 /** The full builder: toolbar on top, palette | canvas | editor below. */
 export function BuilderShell() {
   useUndo();
-  useAutoSave();
   const { sensors, activeDrag, onDragStart, onDragEnd, onDragCancel } =
     useDragAndDrop();
 
-  // Rehydrate the persisted form after mount (avoids SSR hydration mismatch)
-  // and show a "Draft restored" toast if a saved form was loaded.
+  // Restore state after mount (avoids SSR hydration mismatch). A `?form=<id>`
+  // param (dashboard → "Edit") loads that saved form; otherwise the persisted
+  // draft is rehydrated. Autosave itself runs on an interval inside the store.
   useEffect(() => {
-    void useBuilderStore.persist.rehydrate();
-    // Check if there's a saved form before rehydration marks it as restored.
+    const formId = new URLSearchParams(window.location.search).get("form");
+    if (formId) {
+      void useBuilderStore.getState().loadForm(formId);
+      return;
+    }
     const hasExisting =
-      typeof window !== "undefined" &&
       window.localStorage.getItem("formforge:builder") !== null;
+    void useBuilderStore.persist.rehydrate();
     if (hasExisting) {
       toast.success("Draft restored");
     }

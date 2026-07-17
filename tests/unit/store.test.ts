@@ -230,14 +230,51 @@ describe("builder store", () => {
   });
 
   describe("saveForm", () => {
-    it("persists a snapshot readable by the preview and clears dirty", () => {
+    it("persists a snapshot readable by the preview and clears dirty", async () => {
       store().addField("text");
       expect(store().isDirty).toBe(true);
-      store().saveForm();
+      await store().saveForm();
       expect(store().isDirty).toBe(false);
+      expect(store().lastSavedAt).not.toBeNull();
       const snapshot = readFormSnapshot(store().form.id);
       expect(snapshot?.fields).toHaveLength(1);
       expect(snapshot?.createdAt).not.toBe("");
+    });
+
+    it("saves through the storage adapter with version bumps", async () => {
+      store().addField("text");
+      await store().saveForm();
+      store().addField("number");
+      await store().saveForm();
+
+      const forms = await store().listForms();
+      expect(forms).toHaveLength(1);
+      expect(forms[0]!.version).toBe(2);
+      expect(forms[0]!.schema.fields).toHaveLength(2);
+      expect(forms[0]!.title).toBe(store().form.title);
+    });
+
+    it("loadForm restores a saved form by id", async () => {
+      store().updateFormMeta({ title: "Saved one" });
+      store().addField("text");
+      await store().saveForm();
+      const savedId = store().form.id;
+
+      store().resetForm();
+      expect(store().form.fields).toHaveLength(0);
+
+      await store().loadForm(savedId);
+      expect(store().form.title).toBe("Saved one");
+      expect(store().form.fields).toHaveLength(1);
+      expect(store().isDirty).toBe(false);
+    });
+
+    it("deleteForm removes it from the adapter", async () => {
+      store().addField("text");
+      await store().saveForm();
+      const id = store().form.id;
+      await store().deleteForm(id);
+      expect(await store().listForms()).toHaveLength(0);
     });
   });
 });

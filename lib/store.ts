@@ -8,9 +8,11 @@ import type {
   FormSettings,
 } from "@/types";
 import { FIELD_REGISTRY } from "@/lib/field-registry";
+import { storageAdapter, toSavedForm, type SavedForm } from "@/lib/storage";
 import { nowISO, uid } from "@/lib/utils";
 
 const MAX_HISTORY = 50;
+const AUTOSAVE_INTERVAL_MS = 30_000;
 
 export const SAVED_FORM_PREFIX = "formforge:form:";
 
@@ -51,6 +53,12 @@ export function arrayMove<T>(items: T[], from: number, to: number): T[] {
   return next;
 }
 
+export type AutosaveState = {
+  lastSavedAt: string | null;
+  isSaving: boolean;
+  saveError: string | null;
+};
+
 export type BuilderActions = {
   addField: (type: FieldType, atIndex?: number) => string;
   removeField: (id: string) => void;
@@ -68,10 +76,19 @@ export type BuilderActions = {
       settings?: Partial<FormSettings>;
     },
   ) => void;
-  saveForm: () => void;
+  /** Persist the current form through the storage adapter. */
+  saveForm: () => Promise<void>;
+  /** Load a saved form by id (dashboard → builder handoff). */
+  loadForm: (id: string) => Promise<void>;
+  listForms: () => Promise<SavedForm[]>;
+  deleteForm: (id: string) => Promise<void>;
+  /** Called by the interval — saves only when there are unsaved changes. */
+  autoSave: () => void;
+  /** Clear the autosave interval (tests / teardown). */
+  destroy: () => void;
 };
 
-export type BuilderStore = BuilderState & BuilderActions;
+export type BuilderStore = BuilderState & AutosaveState & BuilderActions;
 
 /**
  * Persist a form snapshot so /preview/[id] (a separate route) can load it.
@@ -99,9 +116,19 @@ export function readFormSnapshot(id: string): FormSchema | null {
   }
 }
 
+let autoSaveTimer: ReturnType<typeof setInterval> | null = null;
+
 export const useBuilderStore = create<BuilderStore>()(
   persist(
     (set, get) => {
+      // Autosave heartbeat — only in the browser, cleared via destroy().
+      if (typeof window !== "undefined" && autoSaveTimer === null) {
+        autoSaveTimer = setInterval(
+          () => get().autoSave(),
+          AUTOSAVE_INTERVAL_MS,
+        );
+      }
+
       /** Push a new snapshot onto the history stack (truncating any redo branch). */
       const commit = (form: FormSchema) => {
         const { history, historyIndex } = get();
@@ -126,6 +153,9 @@ export const useBuilderStore = create<BuilderStore>()(
         history: [initialForm],
         historyIndex: 0,
         isDirty: false,
+        lastSavedAt: null,
+        isSaving: false,
+        saveError: null,
 
         addField: (type, atIndex) => {
           const { form } = get();
@@ -234,15 +264,59 @@ export const useBuilderStore = create<BuilderStore>()(
           });
         },
 
-        saveForm: () => {
+        saveForm: async () => {
+          if (get().isSaving) return;
           const { form } = get();
           const stamped = {
             ...form,
             createdAt: form.createdAt || nowISO(),
             updatedAt: nowISO(),
           };
+          // Legacy snapshot keeps existing /preview/[id] links working.
           persistFormSnapshot(stamped);
-          set({ form: stamped, isDirty: false });
+          set({ isSaving: true, saveError: null });
+          try {
+            const previous = await storageAdapter.getForm(stamped.id);
+            await storageAdapter.saveForm(toSavedForm(stamped, previous));
+            await storageAdapter.setLastActiveFormId(stamped.id);
+            set({
+              form: stamped,
+              isDirty: false,
+              isSaving: false,
+              lastSavedAt: nowISO(),
+            });
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Save failed";
+            set({ isSaving: false, saveError: message });
+            setTimeout(() => {
+              if (get().saveError === message) set({ saveError: null });
+            }, 5_000);
+          }
+        },
+
+        loadForm: async (id) => {
+          const saved = await storageAdapter.getForm(id);
+          if (!saved) return;
+          get().loadSchema(saved.schema);
+          set({ lastSavedAt: saved.savedAt, saveError: null });
+          await storageAdapter.setLastActiveFormId(id);
+        },
+
+        listForms: () => storageAdapter.getForms(),
+
+        deleteForm: (id) => storageAdapter.deleteForm(id),
+
+        autoSave: () => {
+          const { isDirty, isSaving } = get();
+          if (isDirty && !isSaving) void get().saveForm();
+        },
+
+        destroy: () => {
+          if (autoSaveTimer !== null) {
+            clearInterval(autoSaveTimer);
+            autoSaveTimer = null;
+          }
         },
       };
     },

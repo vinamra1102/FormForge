@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import {
@@ -24,7 +24,9 @@ import {
 import { toast } from "sonner";
 import type { ExportFormat } from "@/types";
 import { useFormBuilder } from "@/hooks/useFormBuilder";
+import { useBuilderStore } from "@/lib/store";
 import { toEmbedCode, toJSONSchema, toReactCode } from "@/lib/export";
+import { relativeTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -84,6 +86,62 @@ function ThemeToggleDropdownItem() {
   );
 }
 
+/**
+ * Autosave status between the title and the history controls:
+ * saving spinner → error + retry → "Saved <relative time>".
+ */
+function AutosaveIndicator() {
+  const lastSavedAt = useBuilderStore((s) => s.lastSavedAt);
+  const isSaving = useBuilderStore((s) => s.isSaving);
+  const saveError = useBuilderStore((s) => s.saveError);
+  const saveForm = useBuilderStore((s) => s.saveForm);
+
+  // Re-render periodically so the relative time stays fresh.
+  const [, tick] = useReducer((c: number) => c + 1, 0);
+  useEffect(() => {
+    const timer = setInterval(tick, 30_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  if (isSaving) {
+    return (
+      <span
+        className="flex shrink-0 items-center gap-1 text-xs text-foreground/60"
+        role="status"
+      >
+        <Loader2 className="size-3.5 animate-spin" aria-hidden />
+        Saving…
+      </span>
+    );
+  }
+
+  if (saveError) {
+    return (
+      <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-crimson">
+        Save failed
+        <button
+          type="button"
+          aria-label="Retry save"
+          onClick={() => void saveForm()}
+          className="rounded-sm p-1 transition-colors focus-hard hover:bg-crimson hover:text-white"
+        >
+          <RotateCcw className="size-3.5" />
+        </button>
+      </span>
+    );
+  }
+
+  if (lastSavedAt) {
+    return (
+      <span className="shrink-0 text-xs text-foreground/60 max-md:hidden">
+        Saved {relativeTime(lastSavedAt)}
+      </span>
+    );
+  }
+
+  return null;
+}
+
 /** Top bar: logo, editable title, undo/redo, preview, export, save. */
 export function Toolbar() {
   const {
@@ -98,12 +156,13 @@ export function Toolbar() {
     isDirty,
   } = useFormBuilder();
 
+  const isSaving = useBuilderStore((s) => s.isSaving);
+
   const [title, setTitle] = useState(form.title);
   const [exportOpen, setExportOpen] = useState(false);
   const [exportTab, setExportTab] = useState<ExportFormat>("json");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   useEffect(() => setTitle(form.title), [form.title]);
 
@@ -139,12 +198,7 @@ export function Toolbar() {
   };
 
   const handleSave = () => {
-    setSaveState("saving");
-    saveForm();
-    setTimeout(() => {
-      setSaveState("saved");
-      setTimeout(() => setSaveState("idle"), 1000);
-    }, 400);
+    void saveForm();
   };
 
   const handleNewForm = () => {
@@ -159,7 +213,7 @@ export function Toolbar() {
   };
 
   const handlePreview = () => {
-    saveForm();
+    void saveForm();
     window.open(`/preview/${form.id}`, "_blank", "noopener");
   };
 
@@ -187,6 +241,8 @@ export function Toolbar() {
           aria-label="Form title"
           className="h-9 w-full min-w-0 max-w-64 rounded-md border-2 border-transparent bg-transparent px-2 font-display text-sm font-bold text-foreground transition-colors focus-hard hover:border-line-soft"
         />
+
+        <AutosaveIndicator />
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
@@ -344,22 +400,10 @@ export function Toolbar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button size="sm" onClick={handleSave} disabled={saveState === "saving"}>
-          {saveState === "saving" ? (
-            <Loader2 className="animate-spin" />
-          ) : saveState === "saved" ? (
-            <Save />
-          ) : (
-            <Save />
-          )}
+        <Button size="sm" onClick={handleSave} disabled={isSaving}>
+          {isSaving ? <Loader2 className="animate-spin" /> : <Save />}
           <span className="max-sm:hidden">
-            {saveState === "saving"
-              ? "Saving…"
-              : saveState === "saved"
-                ? "Saved ✓"
-                : isDirty
-                  ? "Save*"
-                  : "Save"}
+            {isSaving ? "Saving…" : isDirty ? "Save*" : "Save"}
           </span>
         </Button>
       </div>
