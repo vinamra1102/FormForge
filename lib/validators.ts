@@ -54,8 +54,11 @@ export function isFieldVisible(field: FormField, values: FormValues): boolean {
   return rule.action === "show" ? matches : !matches;
 }
 
-function ruleValue(rule: ValidationRule): number {
-  return typeof rule.value === "number" ? rule.value : Number(rule.value ?? 0);
+/** Numeric rule value, or null when the rule was left empty/invalid. */
+function ruleValue(rule: ValidationRule): number | null {
+  if (rule.value === undefined || rule.value === "") return null;
+  const n = typeof rule.value === "number" ? rule.value : Number(rule.value);
+  return Number.isNaN(n) ? null : n;
 }
 
 function requiredMessage(field: FormField): string {
@@ -74,12 +77,13 @@ function stringFieldSchema(field: FormField): z.ZodTypeAny {
   let schema = z.string();
 
   for (const rule of field.validations) {
+    const n = ruleValue(rule);
     switch (rule.type) {
       case "minLength":
-        schema = schema.min(ruleValue(rule), rule.message);
+        if (n !== null) schema = schema.min(n, rule.message);
         break;
       case "maxLength":
-        schema = schema.max(ruleValue(rule), rule.message);
+        if (n !== null) schema = schema.max(n, rule.message);
         break;
       case "pattern":
         if (typeof rule.value === "string" && rule.value) {
@@ -144,8 +148,10 @@ function numberFieldSchema(field: FormField): z.ZodTypeAny {
   });
 
   for (const rule of field.validations) {
-    if (rule.type === "min") schema = schema.min(ruleValue(rule), rule.message);
-    if (rule.type === "max") schema = schema.max(ruleValue(rule), rule.message);
+    const n = ruleValue(rule);
+    if (n === null) continue;
+    if (rule.type === "min") schema = schema.min(n, rule.message);
+    if (rule.type === "max") schema = schema.max(n, rule.message);
   }
 
   const base = isRequired(field) ? schema : schema.optional();
@@ -164,8 +170,10 @@ function multiselectFieldSchema(field: FormField): z.ZodTypeAny {
     schema = schema.min(1, requiredMessage(field));
   }
   for (const rule of field.validations) {
-    if (rule.type === "min") schema = schema.min(ruleValue(rule), rule.message);
-    if (rule.type === "max") schema = schema.max(ruleValue(rule), rule.message);
+    const n = ruleValue(rule);
+    if (n === null) continue;
+    if (rule.type === "min") schema = schema.min(n, rule.message);
+    if (rule.type === "max") schema = schema.max(n, rule.message);
   }
   return schema;
 }

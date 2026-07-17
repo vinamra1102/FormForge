@@ -327,8 +327,14 @@ export function Toolbar() {
             </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => {
-                resetForm();
-                toast.success("Form reset");
+                if (
+                  window.confirm(
+                    "Reset the form? All fields and settings will be cleared.",
+                  )
+                ) {
+                  resetForm();
+                  toast.success("Form reset");
+                }
               }}
               className="text-crimson focus:bg-crimson focus:text-white"
             >

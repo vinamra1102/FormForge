@@ -109,11 +109,16 @@
 
   function validateField(field, value) {
     var rules = field.validations || [];
-    if (isRequired(field) && isEmpty(value)) {
+    // A rating of 0 means "not yet rated" — treat it as an empty answer so
+    // required rating fields cannot be submitted unrated (matches the
+    // builder preview and the generated React component).
+    var empty =
+      isEmpty(value) || (field.type === "rating" && Number(value) === 0);
+    if (isRequired(field) && empty) {
       var reqRule = findRule(field, "required");
       return (reqRule && reqRule.message) || (field.label || "This field") + " is required";
     }
-    if (isEmpty(value)) return null;
+    if (empty) return null;
 
     for (var i = 0; i < rules.length; i++) {
       var rule = rules[i];

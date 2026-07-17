@@ -86,6 +86,21 @@ describe("builder store", () => {
       store().removeField("nope");
       expect(store().history.length).toBe(before);
     });
+
+    it("strips conditional rules referencing the removed field", () => {
+      const source = store().addField("text");
+      const target = store().addField("text");
+      store().updateField(target, {
+        conditional: {
+          fieldId: source,
+          operator: "equals",
+          value: "yes",
+          action: "show",
+        },
+      });
+      store().removeField(source);
+      expect(store().form.fields[0]!.conditional).toBeUndefined();
+    });
   });
 
   describe("updateField", () => {

@@ -14,13 +14,17 @@ export function toJSONSchema(form: FormSchema): string {
 export function toEmbedCode(form: FormSchema): string {
   // `</` must be escaped so the inline JSON cannot close the script tag early.
   const json = JSON.stringify(form).replace(/<\//g, "<\\/");
+  // The id lands in HTML attributes and the title in an HTML comment —
+  // sanitize both so a hostile schema can't break out of its context.
+  const safeId = form.id.replace(/[^a-zA-Z0-9_-]/g, "");
+  const safeTitle = form.title.replace(/-|<|>/g, " ").trim();
   return [
-    `<!-- FormForge embed · ${form.title} -->`,
-    `<div data-formforge="${form.id}"></div>`,
-    `<script type="application/json" data-formforge-schema="${form.id}">`,
+    `<!-- FormForge embed · ${safeTitle} -->`,
+    `<div data-formforge="${safeId}"></div>`,
+    `<script type="application/json" data-formforge-schema="${safeId}">`,
     json,
     `</script>`,
-    `<script async src="${SITE_URL}/embed.js" data-formforge-id="${form.id}"></script>`,
+    `<script async src="${SITE_URL}/embed.js" data-formforge-id="${safeId}"></script>`,
   ].join("\n");
 }
 
@@ -29,6 +33,20 @@ export function toEmbedCode(form: FormSchema): string {
 // ---------------------------------------------------------------------------
 
 const q = (value: string) => JSON.stringify(value ?? "");
+
+/**
+ * A string attribute in JSX (`placeholder="…"`) treats backslashes literally,
+ * so JSON-escaped quotes would break the syntax. Emitting the value inside an
+ * expression container (`placeholder={"…"}`) makes JSON escaping valid.
+ */
+const qa = (value: string) => `{${JSON.stringify(value ?? "")}}`;
+
+/** Numeric rule value, or null when the rule was left empty/invalid. */
+function numericRuleValue(value: string | number | undefined): number | null {
+  if (value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isNaN(n) ? null : n;
+}
 
 function isRequired(field: FormField): boolean {
   return field.required || field.validations.some((r) => r.type === "required");
@@ -48,12 +66,13 @@ function zodExpression(field: FormField): string {
     let expr = "z.string()";
     for (const rule of field.validations) {
       const msg = q(rule.message);
+      const n = numericRuleValue(rule.value);
       switch (rule.type) {
         case "minLength":
-          expr += `.min(${Number(rule.value ?? 0)}, ${msg})`;
+          if (n !== null) expr += `.min(${n}, ${msg})`;
           break;
         case "maxLength":
-          expr += `.max(${Number(rule.value ?? 0)}, ${msg})`;
+          if (n !== null) expr += `.max(${n}, ${msg})`;
           break;
         case "pattern":
           if (rule.value)
@@ -100,8 +119,10 @@ function zodExpression(field: FormField): string {
       )} })`;
       for (const rule of field.validations) {
         const msg = q(rule.message);
-        if (rule.type === "min") inner += `.min(${Number(rule.value ?? 0)}, ${msg})`;
-        if (rule.type === "max") inner += `.max(${Number(rule.value ?? 0)}, ${msg})`;
+        const n = numericRuleValue(rule.value);
+        if (n === null) continue;
+        if (rule.type === "min") inner += `.min(${n}, ${msg})`;
+        if (rule.type === "max") inner += `.max(${n}, ${msg})`;
       }
       if (!required) inner += ".optional()";
       return `z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), ${inner})`;
@@ -159,7 +180,7 @@ const errorLine = (id: string) =>
 /** JSX for one field inside the generated component. */
 function fieldJSX(field: FormField): string {
   const id = field.id;
-  const label = `        <label htmlFor=${q(id)}>${escapeJSXText(field.label)}${
+  const label = `        <label htmlFor=${qa(id)}>${escapeJSXText(field.label)}${
     isRequired(field) ? " *" : ""
   }</label>`;
   const help = field.helpText
@@ -182,7 +203,7 @@ function fieldJSX(field: FormField): string {
     case "conditional":
       lines.push(
         label,
-        `        <input id=${q(id)} type="text" placeholder=${q(
+        `        <input id=${qa(id)} type="text" placeholder=${qa(
           field.placeholder ?? "",
         )} {...register(${q(id)})} />`,
       );
@@ -190,7 +211,7 @@ function fieldJSX(field: FormField): string {
     case "textarea":
       lines.push(
         label,
-        `        <textarea id=${q(id)} rows={${field.rows ?? 4}} placeholder=${q(
+        `        <textarea id=${qa(id)} rows={${field.rows ?? 4}} placeholder=${qa(
           field.placeholder ?? "",
         )} {...register(${q(id)})} />`,
       );
@@ -199,12 +220,12 @@ function fieldJSX(field: FormField): string {
       const options = (field.options ?? [])
         .map(
           (o) =>
-            `          <option value=${q(o.value)}>${escapeJSXText(o.label)}</option>`,
+            `          <option value=${qa(o.value)}>${escapeJSXText(o.label)}</option>`,
         )
         .join("\n");
       lines.push(
         label,
-        `        <select id=${q(id)} {...register(${q(id)})}>`,
+        `        <select id=${qa(id)} {...register(${q(id)})}>`,
         `          <option value="">${escapeJSXText(
           field.placeholder || "Select…",
         )}</option>`,
@@ -217,7 +238,7 @@ function fieldJSX(field: FormField): string {
       const radios = (field.options ?? [])
         .map(
           (o) =>
-            `          <label className="ff-option"><input type="radio" value=${q(
+            `          <label className="ff-option"><input type="radio" value=${qa(
               o.value,
             )} {...register(${q(id)})} /> ${escapeJSXText(o.label)}</label>`,
         )
@@ -229,7 +250,7 @@ function fieldJSX(field: FormField): string {
       const boxes = (field.options ?? [])
         .map(
           (o) =>
-            `          <label className="ff-option"><input type="checkbox" value=${q(
+            `          <label className="ff-option"><input type="checkbox" value=${qa(
               o.value,
             )} {...register(${q(id)})} /> ${escapeJSXText(o.label)}</label>`,
         )
@@ -249,29 +270,33 @@ function fieldJSX(field: FormField): string {
       const max = field.validations.find((r) => r.type === "max")?.value;
       lines.push(
         label,
-        `        <input id=${q(id)} type="date"${
-          min ? ` min=${q(String(min))}` : ""
-        }${max ? ` max=${q(String(max))}` : ""} {...register(${q(id)})} />`,
+        `        <input id=${qa(id)} type="date"${
+          min ? ` min=${qa(String(min))}` : ""
+        }${max ? ` max=${qa(String(max))}` : ""} {...register(${q(id)})} />`,
       );
       break;
     }
     case "number": {
-      const min = field.validations.find((r) => r.type === "min")?.value;
-      const max = field.validations.find((r) => r.type === "max")?.value;
+      const min = numericRuleValue(
+        field.validations.find((r) => r.type === "min")?.value,
+      );
+      const max = numericRuleValue(
+        field.validations.find((r) => r.type === "max")?.value,
+      );
       lines.push(
         label,
-        `        <input id=${q(id)} type="number"${
-          min !== undefined ? ` min={${Number(min)}}` : ""
-        }${max !== undefined ? ` max={${Number(max)}}` : ""} step={${
+        `        <input id=${qa(id)} type="number"${
+          min !== null ? ` min={${min}}` : ""
+        }${max !== null ? ` max={${max}}` : ""} step={${
           field.step ?? 1
-        }} placeholder=${q(field.placeholder ?? "")} {...register(${q(id)})} />`,
+        }} placeholder=${qa(field.placeholder ?? "")} {...register(${q(id)})} />`,
       );
       break;
     }
     case "rating":
       lines.push(
         label,
-        `        <div className="ff-rating" role="radiogroup" aria-label=${q(
+        `        <div className="ff-rating" role="radiogroup" aria-label=${qa(
           field.label,
         )}>`,
         `          {[1, 2, 3, 4, 5].map((star) => (`,
@@ -287,8 +312,8 @@ function fieldJSX(field: FormField): string {
     case "file":
       lines.push(
         label,
-        `        <input id=${q(id)} type="file"${
-          field.accept ? ` accept=${q(field.accept)}` : ""
+        `        <input id=${qa(id)} type="file"${
+          field.accept ? ` accept=${qa(field.accept)}` : ""
         } {...register(${q(id)})} />`,
       );
       break;
@@ -401,27 +426,78 @@ function checkCondition(
   if (hasConditional || hasRating) destructure.push("watch");
   if (hasRating) destructure.push("setValue");
 
+  // Conditionally hidden fields must not be validated (they are unmounted, so
+  // their errors could never be shown and a hidden required field would make
+  // the form unsubmittable). With conditionals present, the schema is rebuilt
+  // from the currently visible fields on every validation pass — the same
+  // semantics as the FormForge live preview.
+  const visibilityEntries = dataFields
+    .filter((f) => f.conditional?.fieldId)
+    .map((f) => {
+      const c = f.conditional!;
+      const test = `checkCondition(values[${q(c.fieldId)}], ${q(c.operator)}, ${q(c.value)})`;
+      return `  ${q(f.id)}: (values) => ${c.action === "show" ? test : `!${test}`},`;
+    })
+    .join("\n");
+
+  const schemaBlock = hasConditional
+    ? `const fieldSchemas = {
+${schemaLines}
+};
+
+const fullSchema = z.object(fieldSchemas);
+
+type FormValues = z.infer<typeof fullSchema>;
+
+const visibility: Record<
+  string,
+  (values: Record<string, unknown>) => boolean
+> = {
+${visibilityEntries}
+};
+
+/** Validate only the fields that are currently visible. */
+function buildSchema(values: Record<string, unknown>) {
+  const shape: Record<string, z.ZodTypeAny> = {};
+  for (const [id, fieldSchema] of Object.entries(fieldSchemas)) {
+    if (visibility[id]?.(values) ?? true) shape[id] = fieldSchema;
+  }
+  return z.object(shape);
+}
+
+const dynamicResolver = ((values, context, options) =>
+  zodResolver(buildSchema(values))(values, context, options)) as Resolver<FormValues>;`
+    : `const schema = z.object({
+${schemaLines}
+});
+
+type FormValues = z.infer<typeof schema>;`;
+
+  const resolverExpr = hasConditional
+    ? "dynamicResolver"
+    : "zodResolver(schema)";
+
+  const rhfImport = hasConditional
+    ? `import { useForm, type Resolver } from "react-hook-form";`
+    : `import { useForm } from "react-hook-form";`;
+
   return `"use client";
 
 // Generated by FormForge — ${form.title}
 // ${SITE_URL}
 
-import { useForm } from "react-hook-form";
+${rhfImport}
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-const schema = z.object({
-${schemaLines}
-});
-
-type FormValues = z.infer<typeof schema>;
+${schemaBlock}
 ${conditionHelper}
 export default function ${name}() {
   const {
     ${destructure.join(",\n    ")},
     formState: { errors, isSubmitting, isSubmitSuccessful },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: ${resolverExpr},
     defaultValues: {
 ${defaultLines}
     },

@@ -143,8 +143,16 @@ export const useBuilderStore = create<BuilderStore>()(
 
         removeField: (id) => {
           const { form, selectedFieldId } = get();
-          const fields = form.fields.filter((f) => f.id !== id);
-          if (fields.length === form.fields.length) return;
+          if (!form.fields.some((f) => f.id === id)) return;
+          // Also strip conditional rules that referenced the removed field —
+          // a dangling rule would silently hide its target forever.
+          const fields = form.fields
+            .filter((f) => f.id !== id)
+            .map((f) =>
+              f.conditional?.fieldId === id
+                ? { ...f, conditional: undefined }
+                : f,
+            );
           commit({ ...form, fields: reindex(fields) });
           if (selectedFieldId === id) set({ selectedFieldId: null });
         },

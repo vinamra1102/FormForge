@@ -74,9 +74,30 @@ describe("toReactCode", () => {
     const code = toReactCode(sampleForm());
     expect(code).toContain('"use client"');
     expect(code).toContain("export default function ContactUsForm()");
-    expect(code).toContain("zodResolver(schema)");
-    expect(code).toContain("const schema = z.object({");
     expect(code).toContain("useForm<FormValues>");
+    // The sample form has a conditional field → visibility-aware resolver.
+    expect(code).toContain("const fieldSchemas = {");
+    expect(code).toContain("resolver: dynamicResolver");
+    expect(code).toContain("function buildSchema(");
+  });
+
+  it("uses a plain static schema when no conditionals exist", () => {
+    const plain = createEmptyForm("plain");
+    plain.fields = [createField("text", 0)];
+    const code = toReactCode(plain);
+    expect(code).toContain("const schema = z.object({");
+    expect(code).toContain("resolver: zodResolver(schema)");
+    expect(code).not.toContain("dynamicResolver");
+  });
+
+  it("emits quotes in attribute values inside expression containers", () => {
+    const form = createEmptyForm("attrs");
+    const field = createField("text", 0);
+    field.placeholder = 'Say "hello" friend';
+    form.fields = [field];
+    const code = toReactCode(form);
+    // JSX string attributes can't hold escaped quotes — must be {"…"}.
+    expect(code).toContain('placeholder={"Say \\"hello\\" friend"}');
   });
 
   it("includes every data field and skips section data", () => {
