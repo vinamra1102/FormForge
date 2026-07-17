@@ -7,6 +7,7 @@ import { useBuilderStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "./EmptyState";
 import { FieldCard } from "./FieldCard";
+import { FieldErrorBoundary } from "./FieldErrorBoundary";
 
 /** The main drop zone where fields are arranged. */
 export function Canvas() {
@@ -42,7 +43,9 @@ export function Canvas() {
             {/* Extra mobile bottom padding clears the floating add button. */}
             <div className="grid grid-cols-1 gap-3 pb-24 max-md:pb-36 sm:grid-cols-2">
               {fields.map((field) => (
-                <FieldCard key={field.id} field={field} />
+                <FieldErrorBoundary key={field.id} fieldId={field.id}>
+                  <FieldCard field={field} />
+                </FieldErrorBoundary>
               ))}
             </div>
           </SortableContext>

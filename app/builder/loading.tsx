@@ -21,6 +21,15 @@ export default function BuilderLoading() {
             ))}
           </div>
         </div>
+        <div className="hidden w-80 shrink-0 space-y-3 border-l-2 border-line p-4 lg:block">
+          <div className="h-9 animate-pulse border-2 border-line-soft bg-surface-muted" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-16 animate-pulse border-2 border-line-soft bg-surface-muted"
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
