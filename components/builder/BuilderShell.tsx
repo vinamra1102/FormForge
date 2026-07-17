@@ -6,7 +6,7 @@ import type { FormField } from "@/types";
 import type { FieldDefinition } from "@/lib/field-registry";
 import { useBuilderStore } from "@/lib/store";
 import { useDragAndDrop } from "@/hooks/useDragAndDrop";
-import { useUndo } from "@/hooks/useUndo";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { FIELD_ICONS } from "./field-icons";
@@ -40,7 +40,7 @@ function FieldGhost({ field }: { field: FormField }) {
 
 /** The full builder: toolbar on top, palette | canvas | editor below. */
 export function BuilderShell() {
-  useUndo();
+  useKeyboardShortcuts();
   const { sensors, activeDrag, onDragStart, onDragEnd, onDragCancel } =
     useDragAndDrop();
 

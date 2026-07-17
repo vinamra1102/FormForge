@@ -132,6 +132,46 @@ describe("builder store", () => {
       expect(store().form.fields.map((f) => f.order)).toEqual([0, 1, 2]);
     });
 
+    it("duplicateField clones below the original and selects the clone", () => {
+      const a = store().addField("text");
+      store().updateField(a, { label: "Original", required: true });
+      store().addField("number");
+
+      store().duplicateField(a);
+
+      const fields = store().form.fields;
+      expect(fields).toHaveLength(3);
+      expect(fields[1]!.label).toBe("Original");
+      expect(fields[1]!.required).toBe(true);
+      expect(fields[1]!.id).not.toBe(a);
+      expect(fields.map((f) => f.order)).toEqual([0, 1, 2]);
+      expect(store().selectedFieldId).toBe(fields[1]!.id);
+    });
+
+    it("selectNextField / selectPreviousField cycle through fields", () => {
+      const a = store().addField("text");
+      const b = store().addField("number");
+      const c = store().addField("date");
+
+      store().selectField(a);
+      store().selectNextField();
+      expect(store().selectedFieldId).toBe(b);
+      store().selectNextField();
+      expect(store().selectedFieldId).toBe(c);
+      store().selectNextField(); // wraps
+      expect(store().selectedFieldId).toBe(a);
+
+      store().selectPreviousField(); // wraps back
+      expect(store().selectedFieldId).toBe(c);
+
+      store().selectField(null);
+      store().selectNextField(); // nothing selected → first
+      expect(store().selectedFieldId).toBe(a);
+      store().selectField(null);
+      store().selectPreviousField(); // nothing selected → last
+      expect(store().selectedFieldId).toBe(c);
+    });
+
     it("moveField shifts by one and clamps at the edges", () => {
       const a = store().addField("text");
       store().addField("number");

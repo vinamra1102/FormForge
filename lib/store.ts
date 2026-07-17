@@ -66,6 +66,11 @@ export type BuilderActions = {
   reorderFields: (activeId: string, overId: string) => void;
   moveField: (id: string, direction: -1 | 1) => void;
   selectField: (id: string | null) => void;
+  /** Clone a field (new id) directly below the original and select it. */
+  duplicateField: (id: string) => void;
+  /** Cycle selection to the next/previous field on the canvas. */
+  selectNextField: () => void;
+  selectPreviousField: () => void;
   undo: () => void;
   redo: () => void;
   exportSchema: () => string;
@@ -212,6 +217,42 @@ export const useBuilderStore = create<BuilderStore>()(
         },
 
         selectField: (id) => set({ selectedFieldId: id }),
+
+        duplicateField: (id) => {
+          const { form } = get();
+          const index = form.fields.findIndex((f) => f.id === id);
+          const original = form.fields[index];
+          if (!original) return;
+          const clone: FormField = {
+            ...structuredClone(original),
+            id: uid("fld"),
+          };
+          const fields = form.fields.slice();
+          fields.splice(index + 1, 0, clone);
+          commit({ ...form, fields: reindex(fields) });
+          set({ selectedFieldId: clone.id });
+        },
+
+        selectNextField: () => {
+          const { form, selectedFieldId } = get();
+          if (form.fields.length === 0) return;
+          const sorted = [...form.fields].sort((a, b) => a.order - b.order);
+          const index = sorted.findIndex((f) => f.id === selectedFieldId);
+          const next = sorted[(index + 1) % sorted.length];
+          if (next) set({ selectedFieldId: next.id });
+        },
+
+        selectPreviousField: () => {
+          const { form, selectedFieldId } = get();
+          if (form.fields.length === 0) return;
+          const sorted = [...form.fields].sort((a, b) => a.order - b.order);
+          const index = sorted.findIndex((f) => f.id === selectedFieldId);
+          const previous =
+            index === -1
+              ? sorted[sorted.length - 1]
+              : sorted[(index - 1 + sorted.length) % sorted.length];
+          if (previous) set({ selectedFieldId: previous.id });
+        },
 
         undo: () => {
           const { history, historyIndex } = get();

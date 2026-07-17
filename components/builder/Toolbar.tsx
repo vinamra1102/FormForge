@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ExportDialog } from "./ExportDialog";
 import { FormSettingsDialog } from "./FormSettingsDialog";
-import { ShortcutsDialog } from "./ShortcutsDialog";
+import { ShortcutsPanel } from "./ShortcutsPanel";
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -328,7 +328,7 @@ export function Toolbar() {
         {/* Desktop: show all controls inline */}
         <div className="hidden items-center gap-1 sm:flex">
           <ThemeToggle />
-          <ShortcutsDialog />
+          <ShortcutsPanel />
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -480,7 +480,7 @@ export function Toolbar() {
         initialTab={exportTab}
       />
       <FormSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <ShortcutsDialog openExternal={shortcutsOpen} onOpenExternalChange={setShortcutsOpen} />
+      <ShortcutsPanel openExternal={shortcutsOpen} onOpenExternalChange={setShortcutsOpen} />
     </header>
   );
 }
