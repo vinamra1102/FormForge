@@ -37,9 +37,12 @@ function KeyBadge({ children }: { children: string }) {
 export function ShortcutsPanel({
   openExternal,
   onOpenExternalChange,
+  showTrigger = true,
 }: {
   openExternal?: boolean;
   onOpenExternalChange?: (open: boolean) => void;
+  /** Render the keyboard-icon trigger button (off for externally-driven instances). */
+  showTrigger?: boolean;
 } = {}) {
   const [open, setOpen] = useState(false);
 
@@ -62,19 +65,21 @@ export function ShortcutsPanel({
 
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Keyboard shortcuts"
-            onClick={() => setIsOpen(true)}
-          >
-            <Keyboard />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Keyboard shortcuts (?)</TooltipContent>
-      </Tooltip>
+      {showTrigger && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Keyboard shortcuts"
+              onClick={() => setIsOpen(true)}
+            >
+              <Keyboard />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Keyboard shortcuts (?)</TooltipContent>
+        </Tooltip>
+      )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-[560px]">

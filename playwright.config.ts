@@ -18,7 +18,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm start",
+    // npx resolves the local next binary — works whether pnpm is on PATH
+    // or invoked through corepack.
+    command: "npx --no-install next start",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,

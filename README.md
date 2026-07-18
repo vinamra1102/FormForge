@@ -34,13 +34,21 @@ embed snippet that renders anywhere.
   - **React component** — a complete TSX component with RHF + Zod inlined;
   - **Embed code** — a `<script>` snippet powered by `public/embed.js` that
     renders the form on any website, validation and conditional logic included.
+- **Shareable links** — the whole schema gzip-compressed into a URL. Send a
+  preview to anyone, no account required.
+- **Autosave + dashboard** — drafts autosave every 30 seconds behind a
+  `StorageAdapter` interface (localStorage out of the box, Supabase when
+  configured), with a dashboard listing every saved form and its version.
+- **Optional auth** — Clerk sign-in and per-user Supabase persistence when
+  env keys are present; fully client-side otherwise.
 - **Undo everything** — 50-step history stack. `Ctrl+Z` / `Ctrl+Shift+Z`.
 - **Accessible by default** — the entire builder is keyboard-operable
-  (Enter to edit, Delete to remove, arrows to reorder), every input is
-  labelled, and focus is always visible. Press `?` for the shortcuts panel.
+  (Enter to edit, Delete to remove, arrows to reorder, `D` to duplicate,
+  Tab to cycle), every input is labelled, and focus is always visible.
+  Press `?` for the shortcuts panel.
 - **Dark mode** — throughout the app, plus a per-form theme for previews.
-- **Mobile responsive** — the builder degrades gracefully to a single column
-  at 375px; preview forms are fully usable on phones.
+- **Fully mobile** — bottom-sheet palette and field editor, long-press touch
+  drag, 44px touch targets, safe-area aware. Not degraded — usable.
 
 ## Tech stack
 
@@ -62,6 +70,11 @@ pnpm install
 pnpm dev          # http://localhost:3000
 ```
 
+Auth and cloud persistence are optional — copy `.env.local.example` to
+`.env.local` and fill in the Clerk + Supabase keys to enable them (the
+Supabase schema lives in `supabase/migrations/001_initial.sql`). Without
+keys, FormForge runs fully client-side with localStorage persistence.
+
 ### Scripts
 
 | Command          | What it does                                  |
@@ -78,15 +91,19 @@ pnpm dev          # http://localhost:3000
 
 ```
 types/index.ts        The FormSchema model — single source of truth
-lib/store.ts          Zustand store: fields, selection, 50-step undo history
+lib/store.ts          Zustand store: fields, selection, undo history, autosave
+lib/storage/          StorageAdapter interface + localStorage/Supabase impls
 lib/schema.ts         Zod schemas validating the FormSchema itself
 lib/validators.ts     buildZodSchema(fields) → live preview validation
-lib/export.ts         JSON / React component / embed code generators
+lib/export.ts         JSON / React / embed generators + shareable URL codec
+lib/shortcuts.ts      Keyboard shortcut registry
 components/builder/   Sidebar palette, DnD canvas, field editor, toolbar
 components/fields/    The 12 field components (builder + preview modes)
 components/preview/   Live preview: RHF + dynamic resolver + success screen
+components/dashboard/ Saved-forms dashboard
 app/api/export/       POST endpoint (Zod-validated, 20 req/min per IP)
 public/embed.js       Dependency-free runtime behind the embed export
+supabase/migrations/  Postgres schema with per-user RLS
 ```
 
 The preview's clever bit: the Zod schema is rebuilt from the *currently

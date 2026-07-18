@@ -480,7 +480,11 @@ export function Toolbar() {
         initialTab={exportTab}
       />
       <FormSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-      <ShortcutsPanel openExternal={shortcutsOpen} onOpenExternalChange={setShortcutsOpen} />
+      <ShortcutsPanel
+        showTrigger={false}
+        openExternal={shortcutsOpen}
+        onOpenExternalChange={setShortcutsOpen}
+      />
     </header>
   );
 }
