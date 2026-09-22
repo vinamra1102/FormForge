@@ -133,7 +133,7 @@ export function Hero() {
           <Image
             src="/illustrations/hero-drag-drop.png"
             alt="A builder dragging a text field block into a form, with his dog watching"
-            width={1664}
+            width={1672}
             height={941}
             priority
             className="h-auto w-full"

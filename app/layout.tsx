@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/illustrations/hero-drag-drop.png",
-        width: 1664,
+        width: 1672,
         height: 941,
         alt: "FormForge — drag-and-drop form builder",
       },
